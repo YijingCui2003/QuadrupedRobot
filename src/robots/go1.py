@@ -30,9 +30,14 @@ def motor_angles_from_foot_positions(foot_local_positions,
       torch.clip(l_up**2 + l_low**2 + 2 * l_up * l_low * torch.cos(theta_knee),
                  1e-7, 1))
   theta_hip = torch.arcsin(torch.clip(-x / l, -1, 1)) - theta_knee / 2
+#   c1 = l_hip * y - l * torch.cos(theta_hip + theta_knee / 2) * z
+#   s1 = l * torch.cos(theta_hip + theta_knee / 2) * y + l_hip * z
+#   theta_ab = torch.arctan2(s1, c1)
+
   c1 = l_hip * y - l * torch.cos(theta_hip + theta_knee / 2) * z
   s1 = l * torch.cos(theta_hip + theta_knee / 2) * y + l_hip * z
-  theta_ab = torch.arctan2(s1, c1)
+  theta_ab = torch.atan2(s1, c1)  # 将 torch.arctan2 改为 torch.atan2
+
 
   # thetas: num_envs x 4
   joint_angles = torch.stack([theta_ab, theta_hip, theta_knee], dim=2)

@@ -106,9 +106,13 @@ def compute_desired_acc(
     # if ans in ["y", "Y"]:
     #   import pdb
     #   pdb.set_trace()
+
     return torch.concatenate(
         (desired_lin_acc_body_frame, desired_ang_acc_body_frame), dim=1
     )
+    # return torch.cat(
+    #         (desired_lin_acc_body_frame, desired_ang_acc_body_frame), dim=1
+    # )
 
 
 @torch.jit.script
@@ -127,6 +131,10 @@ def convert_to_skew_symmetric_batch(foot_positions):
     return torch.concatenate(
         [skew[:, :, :, 0], skew[:, :, :, 1], skew[:, :, :, 2], skew[:, :, :, 3]], dim=2
     )
+    
+    # return torch.cat(
+    #     [skew[:, :, :, 0], skew[:, :, :, 1], skew[:, :, :, 2], skew[:, :, :, 3]], dim=2
+    # )
 
 
 @torch.jit.script

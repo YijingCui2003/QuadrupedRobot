@@ -9,10 +9,10 @@ cd rsl_rl && pip install -e . && cd ..
 
 ```bash
 # 简单测试
-python -m src.robots.go1_robot_exercise_example --show_gui=True --use_gpu=True --num_envs=40
+python -m src.robots.go1_robot_exercise_example --show_gui=True --use_gpu=True --num_envs=1
 
 # clipped least square test
-python -m src.controllers.go1_centroidal_body_controller_example --show_gui=True --use_gpu=True --num_envs=40
+python -m src.controllers.go1_centroidal_body_controller_example --show_gui=True --use_gpu=True --num_envs=1
 ```
 
 # 训练

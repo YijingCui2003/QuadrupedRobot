@@ -15,9 +15,9 @@ from src.envs import env_wrappers
 config_flags.DEFINE_config_file(
     "config", "src/agents/ppo/configs/pronk.py",
     "experiment configuration.")
-flags.DEFINE_integer("num_envs", 4096, "number of parallel environments.")
-flags.DEFINE_bool("use_gpu", True, "whether to use GPU.")
-flags.DEFINE_bool("show_gui", False, "whether to show GUI.")
+flags.DEFINE_integer("num_envs", 1, "number of parallel environments.")
+flags.DEFINE_bool("use_gpu", False, "whether to use GPU.")
+flags.DEFINE_bool("show_gui", True, "whether to show GUI.")
 flags.DEFINE_string("logdir", "logs", "logdir.")
 flags.DEFINE_string("load_checkpoint", None, "checkpoint to load.")
 FLAGS = flags.FLAGS

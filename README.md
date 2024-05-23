@@ -204,3 +204,68 @@ The environment is implemented in `src/envs/jump_env.py`, where the configs can 
 
 This repository is inspired by, and refactored from, the [legged_gym](https://github.com/leggedrobotics/legged_gym) repository. In addition, the PPO implementation is modified from [rsl_rl](https://github.com/leggedrobotics/rsl_rl). We thank the authors of these repos for their efforts.
 
+
+
+
+ 
+
+```
+THU
+├─ README.md
+├─ data   # 模型文件
+└─ src
+   ├─ agents  # 实现不同智能体（Agent）的代码
+   │  └─ ppo
+   │     ├─ configs 
+   │     │  ├─ bound.py
+   │     │  ├─ bound_e2e.py
+   │     │  ├─ pronk.py
+   │     │  ├─ pronk_e2e.py
+   │     │  └─ trot.py
+   │     ├─ eval.py
+   │     ├─ eval_all.py
+   │     ├─ replay_actions.py
+   │     └─ train.py
+   ├─ configs   # 控制逻辑，控制器的实现
+   │  └─ defaults
+   │     ├─ asset_options.py
+   │     └─ sim_config.py
+   ├─ controllers
+   │  ├─ centroidal_body_controller_example.py
+   │  ├─ phase_gait_generator.py
+   │  ├─ phase_gait_generator_example.py
+   │  ├─ qp_torque_optimizer.py
+   │  └─ raibert_swing_leg_controller.py
+   ├─ dog_tracer
+   │  ├─ assets
+   │  │  └─ app.css
+   │  └─ dog_tracer.py
+   ├─ envs
+   │  ├─ configs
+   │  │  ├─ bound.py
+   │  │  ├─ bound_e2e.py
+   │  │  ├─ pronk.py
+   │  │  ├─ pronk_e2e.py
+   │  │  └─ trot.py
+   │  ├─ env_wrappers.py
+   │  ├─ go1_rewards.py    # 奖励函数设置
+   │  ├─ jump_env.py
+   │  ├─ jump_env_e2e.py
+   │  ├─ jump_env_example.py
+   │  └─ trot_env.py
+   ├─ robots
+   │  ├─ go1.py
+   │  ├─ go1_robot.py
+   │  ├─ go1_robot_exercise_example.py
+   │  ├─ motors.py
+   │  ├─ robot.py
+   │  └─ robot_state_estimator.py
+   ├─ solver
+   │  └─ pdhg
+   │     ├─ qp_solver.py
+   │     └─ torch_utils.py
+   └─ utilities
+      ├─ moving_window_filter.py
+      └─ rotation_utils.py
+
+```

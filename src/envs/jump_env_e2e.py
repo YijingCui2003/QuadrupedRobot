@@ -7,6 +7,7 @@ from typing import Sequence, Tuple
 
 from isaacgym import gymapi, gymutil
 from isaacgym.torch_utils import to_torch
+from isaacgym import terrain_utils
 import ml_collections
 import numpy as np
 import torch
@@ -17,6 +18,7 @@ from src.envs import go1_rewards
 from src.robots import go1, go1_robot
 from src.robots.motors import MotorControlMode
 from src.robots.motors import MotorCommand
+from src.utilities.terrain import Terrain
 
 
 # @torch.jit.script
@@ -47,26 +49,6 @@ def world_frame_to_gravity_frame(robot_yaw, world_frame_vec):
                              cos_yaw * world_frame_vec[:, 1])
   return gravity_frame_vec
 
-
-def create_sim(sim_conf):
-  gym = gymapi.acquire_gym()
-  _, sim_device_id = gymutil.parse_device_str(sim_conf.sim_device)
-  if sim_conf.show_gui:
-    graphics_device_id = sim_device_id
-  else:
-    graphics_device_id = -1
-
-  sim = gym.create_sim(sim_device_id, graphics_device_id,
-                       sim_conf.physics_engine, sim_conf.sim_params)
-
-  if sim_conf.show_gui:
-    viewer = gym.create_viewer(sim, gymapi.CameraProperties())
-    gym.subscribe_viewer_keyboard_event(viewer, gymapi.KEY_ESCAPE, "QUIT")
-    gym.subscribe_viewer_keyboard_event(viewer, gymapi.KEY_V,
-                                        "toggle_viewer_sync")
-  else:
-    viewer = None
-  return gym, sim, viewer
 
 
 class JumpEnvE2E:
@@ -102,8 +84,9 @@ class JumpEnvE2E:
         show_gui=show_gui,
         use_penetrating_contact=self._config.get('use_penetrating_contact',
                                                  False))
-    self._gym, self._sim, self._viewer = create_sim(self._sim_conf)
-    self._create_terrain()
+    # self._gym, self._sim, self._viewer = self.create_sim(self._sim_conf)
+    self.create_sim(self._sim_conf)
+    # self._create_terrain()
     self._init_positions = self._compute_init_positions()
     if self._use_real_robot:
       robot_class = go1_robot.Go1Robot
@@ -158,21 +141,87 @@ class JumpEnvE2E:
     self._prepare_rewards()
     self._extras = dict()
 
-  def _create_terrain(self):
-    """Creates terrains.
+  class CfgTerrain:
+    mesh_type = 'trimesh' # "heightfield" # none, plane, heightfield or trimesh
+    horizontal_scale = 0.1 # [m]
+    vertical_scale = 0.005 # [m]
+    border_size = 25 # [m]
+    curriculum = True
+    static_friction = 1.0
+    dynamic_friction = 1.0
+    restitution = 0.
+    # rough terrain only:
+    measure_heights = True
+    measured_points_x = [-0.8, -0.7, -0.6, -0.5, -0.4, -0.3, -0.2, -0.1, 0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8] # 1mx1.6m rectangle (without center line)
+    measured_points_y = [-0.5, -0.4, -0.3, -0.2, -0.1, 0., 0.1, 0.2, 0.3, 0.4, 0.5]
+    selected = False # select a unique terrain type and pass all arguments
+    terrain_kwargs = None # Dict of arguments for selected terrain
+    max_init_terrain_level = 5 # starting curriculum state
+    terrain_length = 8.
+    terrain_width = 8.
+    num_rows= 10 # number of terrain rows (levels)
+    num_cols = 20 # number of terrain cols (types)
+    # terrain types: [smooth slope, rough slope, stairs up, stairs down, discrete]
+    terrain_proportions = [0.1, 0.1, 0.35, 0.25, 0.2]
+    # trimesh only:
+    slope_treshold = 0.75 # slopes above this threshold will be corrected to vertical surfaces
 
-    Note that we set the friction coefficient to all 0 here. This is because
-    Isaac seems to pick the larger friction out of a contact pair as the
-    actual friction coefficient. We will set the corresponding friction coef
-    in robot friction.
-    """
-    plane_params = gymapi.PlaneParams()
-    plane_params.normal = gymapi.Vec3(0.0, 0.0, 1.0)
-    plane_params.static_friction = 1.
-    plane_params.dynamic_friction = 1.
-    plane_params.restitution = 0.
-    self._gym.add_ground(self._sim, plane_params)
-    self._terrain = None
+
+  def create_sim(self,sim_conf):
+    gym = gymapi.acquire_gym()
+    _, sim_device_id = gymutil.parse_device_str(sim_conf.sim_device)
+    if sim_conf.show_gui:
+      graphics_device_id = sim_device_id
+    else:
+      graphics_device_id = -1
+
+    sim = gym.create_sim(sim_device_id, graphics_device_id,
+                       sim_conf.physics_engine, sim_conf.sim_params)
+
+    if sim_conf.show_gui:
+      viewer = gym.create_viewer(sim, gymapi.CameraProperties())
+      gym.subscribe_viewer_keyboard_event(viewer, gymapi.KEY_ESCAPE, "QUIT")
+      gym.subscribe_viewer_keyboard_event(viewer, gymapi.KEY_V,
+                                          "toggle_viewer_sync")
+    else:
+      viewer = None
+    
+    self._gym = gym
+    self._sim = sim
+    self._viewer = viewer
+    
+    self.terrain = Terrain(self.CfgTerrain(),  self._num_envs)
+    # self._create_trimesh()
+    # self._create_terrain()
+
+    # return gym, sim, viewer
+
+  def _create_trimesh(self):
+      tm_params = gymapi.TriangleMeshParams()
+      tm_params.nb_vertices = self.terrain.vertices.shape[0]
+      tm_params.nb_triangles = self.terrain.triangles.shape[0]
+
+      tm_params.transform.p.x = -self.terrain.cfg.border_size 
+      tm_params.transform.p.y = -self.terrain.cfg.border_size
+      tm_params.transform.p.z = 0.0
+      tm_params.static_friction = self.CfgTerrain.static_friction
+      tm_params.dynamic_friction = self.CfgTerrain.dynamic_friction
+      tm_params.restitution = self.CfgTerrain.restitution
+      print("----------------------------------------------------------------")
+      self._gym.add_triangle_mesh(self._sim, self.terrain.vertices.flatten(order='C'), self.terrain.triangles.flatten(order='C'), tm_params)   
+      print("----------------------------------------------------------------")
+      self.height_samples = torch.tensor(self.terrain.heightsamples).view(self.terrain.tot_rows, self.terrain.tot_cols).to(self.device)
+
+  def _create_terrain(self):
+      plane_params = gymapi.PlaneParams()
+      plane_params.normal = gymapi.Vec3(0.0, 0.0, 1.0)
+      plane_params.static_friction = 1.0
+      plane_params.dynamic_friction = 1.0
+      plane_params.restitution = 0.0
+      self._gym.add_ground(self._sim, plane_params)
+      self._terrain = None
+
+
 
   def _compute_init_positions(self):
     init_positions = torch.zeros((self._num_envs, 3), device=self._device)
